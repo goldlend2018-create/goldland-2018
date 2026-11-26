@@ -1,0 +1,2 @@
+# Development
+Initial stack: plain HTML, CSS, JavaScript; no build dependency. GitHub main branch. Use Chrome for reference inspection, GitHub commits for version history, Codex for future implementation. Run locally with python -m http.server 8000. Use assets/ for approved images and record source/license. No backend or hosting configured yet.
