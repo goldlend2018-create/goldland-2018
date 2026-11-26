@@ -1,0 +1,2 @@
+# Project instructions
+Read README, docs and CHANGELOG before editing. Ukrainian public website. Independent supplier, never claim authorized dealership. Verify company details, inventory and photo rights. Keep secrets and internal prices out of this public repository. Update CHANGELOG and ROADMAP with every meaningful change. Test navigation, mobile layout and forms; never pretend a form sends data without a backend.
