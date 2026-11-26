@@ -1,7 +1,19 @@
 import os, pathlib, io, re
 import dropbox
 from PIL import Image, ImageOps
-db=dropbox.Dropbox(oauth2_refresh_token=os.environ["DROPBOX_REFRESH_TOKEN"],app_key=os.environ["DROPBOX_APP_KEY"],app_secret=os.environ["DROPBOX_APP_SECRET"])
+import requests
+for name in ("DROPBOX_APP_KEY","DROPBOX_APP_SECRET","DROPBOX_REFRESH_TOKEN"):
+ if not os.environ.get(name,"").strip(): raise SystemExit("Missing secret: "+name)
+response=requests.post("https://api.dropboxapi.com/oauth2/token",auth=(os.environ["DROPBOX_APP_KEY"].strip(),os.environ["DROPBOX_APP_SECRET"].strip()),data={"grant_type":"refresh_token","refresh_token":os.environ["DROPBOX_REFRESH_TOKEN"].strip()},timeout=30)
+if not response.ok:
+ try: error=response.json().get("error","unknown")
+ except ValueError: error="non_json_response"
+ allowed={"invalid_grant","invalid_client","invalid_request","invalid_access_token","unsupported_grant_type","invalid_scope"}
+ raise SystemExit("Dropbox OAuth HTTP "+str(response.status_code)+": "+(error if isinstance(error,str) and error in allowed else "unclassified_error"))
+token=response.json()["access_token"]
+print("Dropbox OAuth refresh succeeded")
+db=dropbox.Dropbox(oauth2_access_token=token)
+
 folders={"CLAAS_AXION_960_2019":"960","CLAAS_AXION_950_2018":"950-2018","CLAAS_AXION_950_2019":"950-2019","CLAAS_AXION_930_2019":"930","COMPANY":"company"}
 result=db.files_list_folder("/publish",recursive=True)
 count=0
