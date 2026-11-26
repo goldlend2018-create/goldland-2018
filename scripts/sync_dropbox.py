@@ -42,6 +42,24 @@ for listing,machine in mapping.items():
    im.save(dest,"WEBP",quality=85)
    count+=1
  print(f"Listing {listing}: {len(photos)} photos")
+
+# Import only explicitly approved brand assets from Dropbox root.
+brand=pathlib.Path("assets/catalog/brand")
+brand.mkdir(parents=True,exist_ok=True)
+for name in ["goldland-logo.jpg","goldland-symbol.jpg","goldland-name.jpg","goldland-slogan.jpg","claas.jpg","lemken.jpg"]:
+ try:
+  _,response=db.files_download("/"+name)
+  with Image.open(io.BytesIO(response.content)) as im:
+   im=ImageOps.exif_transpose(im).convert("RGB")
+   im.thumbnail((1500,1500))
+   im.save(brand/name,"JPEG",quality=94)
+  print("Imported brand asset: "+name)
+  count+=1
+ except dropbox.exceptions.ApiError as exc:
+  if exc.error.is_path() and exc.error.get_path().is_not_found():
+   print("Missing brand asset: "+name)
+  else: raise
+
 if not count: raise SystemExit("No matching listing photos accessible to Dropbox app")
 manifest={key:[p.as_posix() for p in sorted((root/key).glob("*.webp"))] for key in ["960","950-2018","950-2019","930","company"]}
 (root/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
