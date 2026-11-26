@@ -14,29 +14,35 @@ token=response.json()["access_token"]
 print("Dropbox OAuth refresh succeeded")
 db=dropbox.Dropbox(oauth2_access_token=token)
 
-folders={"CLAAS_AXION_960_2019":"960","CLAAS_AXION_950_2018":"950-2018","CLAAS_AXION_950_2019":"950-2019","CLAAS_AXION_930_2019":"930","COMPANY":"company"}
-result=db.files_list_folder("/publish",recursive=True)
+import json
+mapping={"8910402":"950-2019","8914210":"930","8977926":"950-2018"}
+root=pathlib.Path("assets/catalog")
+root.mkdir(parents=True,exist_ok=True)
 count=0
-while True:
- for entry in result.entries:
-  if not isinstance(entry,dropbox.files.FileMetadata): continue
-  parts=entry.path_display.strip("/").split("/")
-  if len(parts)!=3 or parts[1] not in folders or not re.fullmatch(r"[0-9]{1,3}\.(jpg|jpeg|png|webp)",parts[2],re.I): continue
-  if entry.size>30000000: continue
-  _,response=db.files_download(entry.path_lower)
-  with Image.open(io.BytesIO(response.content)) as im:
+for listing,machine in mapping.items():
+ try:
+  page=db.files_list_folder("/"+listing)
+ except dropbox.exceptions.ApiError as exc:
+  if exc.error.is_path() and exc.error.get_path().is_not_found():
+   print("Missing listing folder: "+listing)
+   continue
+  raise
+ entries=list(page.entries)
+ while page.has_more:
+  page=db.files_list_folder_continue(page.cursor)
+  entries.extend(page.entries)
+ photos=sorted((e for e in entries if isinstance(e,dropbox.files.FileMetadata) and re.fullmatch(listing+r"_[0-9]+\.(jpg|jpeg|png|webp)",e.name,re.I) and e.size<=30000000),key=lambda e:e.name)
+ for i,entry in enumerate(photos,1):
+  _,download=db.files_download(entry.path_lower)
+  with Image.open(io.BytesIO(download.content)) as im:
    im=ImageOps.exif_transpose(im).convert("RGB")
    im.thumbnail((1800,1800))
-   dest=pathlib.Path("assets/catalog")/folders[parts[1]]/(pathlib.Path(parts[2]).stem+".webp")
+   dest=root/machine/f"{i:02d}.webp"
    dest.parent.mkdir(parents=True,exist_ok=True)
    im.save(dest,"WEBP",quality=85)
    count+=1
- if not result.has_more: break
- result=db.files_list_folder_continue(result.cursor)
-print(f"Processed {count} approved images")
-
-import json
-root=pathlib.Path("assets/catalog")
-root.mkdir(parents=True,exist_ok=True)
-manifest={key:[p.as_posix() for p in sorted((root/key).glob("*.webp"))] for key in folders.values()}
+ print(f"Listing {listing}: {len(photos)} photos")
+if not count: raise SystemExit("No matching listing photos accessible to Dropbox app")
+manifest={key:[p.as_posix() for p in sorted((root/key).glob("*.webp"))] for key in ["960","950-2018","950-2019","930","company"]}
 (root/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
+print(f"Processed {count} approved images")
