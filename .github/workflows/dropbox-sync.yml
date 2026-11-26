@@ -1,0 +1,34 @@
+name: Dropbox photo sync
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
+permissions:
+  contents: write
+concurrency:
+  group: dropbox-photo-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install dropbox==12.0.2 Pillow==12.1.1
+      - run: python scripts/sync_dropbox.py
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+      - name: Commit approved photos
+        run: |
+          git config user.name 'goldland-photo-sync[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p assets/catalog
+          git add assets/catalog
+          if ! git diff --cached --quiet; then
+            git commit -m 'Sync approved Dropbox photos'
+            git push
+          fi
