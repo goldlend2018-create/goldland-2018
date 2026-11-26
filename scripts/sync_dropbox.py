@@ -22,3 +22,9 @@ while True:
  if not result.has_more: break
  result=db.files_list_folder_continue(result.cursor)
 print(f"Processed {count} approved images")
+
+import json
+root=pathlib.Path("assets/catalog")
+root.mkdir(parents=True,exist_ok=True)
+manifest={key:[p.as_posix() for p in sorted((root/key).glob("*.webp"))] for key in folders.values()}
+(root/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
