@@ -1,0 +1,2 @@
+# Catalog 2026-11-26
+Four CLAAS tractors from commercial offers. Public sale prices preliminary, availability unconfirmed. Customer and bank details excluded. AXION 930 updated offer confirms 2019 and 144700 EUR. Images remain placeholders pending extraction and binary upload. Business contact details taken from offer footers.
